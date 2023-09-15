@@ -9,8 +9,18 @@ using namespace std;
 
 void get_URL( const string& host, const string& path )
 {
-  cerr << "Function called: get_URL(" << host << ", " << path << ")\n";
-  cerr << "Warning: get_URL() has not been implemented yet.\n";
+  // 创建一个套接字，然后连接到远程服务器，发送请求然后接受返回的信号
+  TCPSocket sock;
+  Address addrClient=Address(host,"http"); //第一个参数是host，第二个参数是采用的协议类型
+  sock.connect(addrClient); //socket 连接到了本地
+  sock.write("GET "+path+" HTTP/1.1\r\n"+"Host:"+host+"\r\n"+"Connection: clsoe\r\n\r\n");// 疑问，都没根web服务器连接呢，要发给水呢？
+  while(1){
+    string recv;
+    sock.read(recv);
+    cout<<recv;
+    if (sock.eof()) break; // 如果已经读完了所有信息，就终止
+  }
+  sock.close();
 }
 
 int main( int argc, char* argv[] )
