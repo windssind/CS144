@@ -4,7 +4,7 @@
 #include <stdexcept>
 #include <string>
 #include <string_view>
-
+#include <cstdint>
 class Reader;
 class Writer;
 
@@ -13,6 +13,12 @@ class ByteStream
 protected:
   uint64_t capacity_;
   // Please add any additional state to the ByteStream here, and not to the Writer and Reader interfaces.
+  std::queue < char > buffer;
+  bool hasClose ; // if the stream has closed ?
+  bool error;
+  uint64_t numOfPop;
+  uint64_t numOfPush;
+
 
 public:
   explicit ByteStream( uint64_t capacity );

@@ -3,9 +3,21 @@
 #include "byte_stream.hh"
 
 #include <string>
+#include <vector>
 
+using namespace std;
 class Reassembler
 {
+private:
+  uint64_t needIndex; // 需要的下一个string的index
+  uint64_t endIndex;
+  vector <uint64_t> sizeArr;
+  vector <uint64_t> indexArr ;
+  vector <string> subStrings;
+  uint64_t bytesPending;
+  void removeSubString(uint64_t  index);
+  string cutBeyondCapacity(uint64_t first_index , string data,uint64_t availableCapacity);
+  void merge(string *data, uint64_t *first_index);
 public:
   /*
    * Insert a new substring to be reassembled into a ByteStream.
@@ -27,6 +39,7 @@ public:
    *
    * The Reassembler should close the stream after writing the last byte.
    */
+  Reassembler();
   void insert( uint64_t first_index, std::string data, bool is_last_substring, Writer& output );
 
   // How many bytes are stored in the Reassembler itself?

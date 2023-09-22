@@ -52,7 +52,7 @@ int main()
     {
       ReassemblerTestHarness test { "overlapping inserts", 1 };
 
-      test.execute( Insert { "ab", 0 } );
+      test.execute( Insert { "ab", 0 } ); // 从这里可以看出,大于available的不是应该discard吗
       test.execute( BytesPushed( 1 ) );
       test.execute( BytesPending( 0 ) );
 
@@ -80,6 +80,7 @@ int main()
       test.execute( BytesPushed( 0 ) );
       test.execute( BytesPending( 1 ) );
 
+
       test.execute( Insert { "bX", 2 } );
       test.execute( BytesPushed( 0 ) );
       test.execute( BytesPending( 1 ) );
@@ -90,7 +91,9 @@ int main()
       test.execute( BytesPending( 0 ) );
       test.execute( ReadAll( "ab" ) );
 
-      test.execute( Insert { "bc", 1 } );
+     
+     
+      test.execute( Insert { "bc", 1 } ); 
       test.execute( BytesPushed( 3 ) );
       test.execute( BytesPending( 0 ) );
 
