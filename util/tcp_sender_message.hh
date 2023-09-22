@@ -26,7 +26,7 @@ struct TCPSenderMessage
   Wrap32 seqno { 0 };
   bool SYN { false };
   Buffer payload {};
-  bool FIN { false };
+  bool FIN { false }; //学会这种组织结构体的形式
 
   // How many sequence numbers does this segment use?
   size_t sequence_length() const { return SYN + payload.size() + FIN; }

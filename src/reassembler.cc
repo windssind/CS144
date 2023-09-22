@@ -88,4 +88,8 @@ void Reassembler:: merge(string *data , uint64_t * first_index){
       --lenArr;
     }
 }
+
+uint64_t Reassembler :: get_needIndex() {
+  return this->needIndex;
+}
 // TODO：还要补充：合并后如果超出了的部分，也是unacceppted
