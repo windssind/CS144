@@ -25,7 +25,7 @@ void TCPReceiver::receive( TCPSenderMessage message, Reassembler& reassembler, W
     reassembler.insert((uint64_t)(preNeedIndex + delta),(string)(std::string_view)(message.payload),FIN,inbound_stream);// TODO：存疑，第一个参数 很明显是错误的，在streamindex和absolute之间的index应该如何转化
     //这行代码有问题，因为传来的message不一定是会被立刻使用ackno = ackno.value()+message.sequence_length();
     uint64_t nextNeedIndex = reassembler.get_needIndex();
-    ackno = Wrap32::wrap((uint64_t)(ackno.value().unwrap(ISN.value(),preNeedIndex) +(nextNeedIndex - preNeedIndex) ),ISN.value()) ; // 修改成这个的理由
+    ackno = ISN.value() + nextNeedIndex + 1; // 修改成这个的理由
     if (FIN){
       if (reassembler.isFin()){
         ackno = ISN.value() + (uint32_t)(nextNeedIndex+2) ;
