@@ -39,8 +39,6 @@ void TCPReceiver::receive( TCPSenderMessage message, Reassembler& reassembler, W
 // 不包括send，只是构造一个message,让sender去处理
 TCPReceiverMessage TCPReceiver::send( const Writer& inbound_stream ) const
 {
-  // 如何将struct的内容转为字节流
-  //inbound_stream.push()
   TCPReceiverMessage message;
   if (ISN.has_value()) message.ackno = ackno ;
   uint64_t capacity= inbound_stream.available_capacity();
