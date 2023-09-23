@@ -40,6 +40,7 @@ public:
    * The Reassembler should close the stream after writing the last byte.
    */
   Reassembler();
+  bool isFin();
   uint64_t get_needIndex() ;
   void insert( uint64_t first_index, std::string data, bool is_last_substring, Writer& output );
 

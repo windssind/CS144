@@ -20,5 +20,5 @@
 struct TCPReceiverMessage
 {
   std::optional<Wrap32> ackno {};
-  uint16_t window_size {};
+  uint16_t window_size {}; // 可以看出窗口的大小最大为65535
 };
