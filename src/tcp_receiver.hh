@@ -10,13 +10,14 @@ class TCPReceiver
 private :
   std::optional <Wrap32> ISN;
   std::optional <Wrap32> ackno;
+  bool SYN;
   bool FIN ;
 public:
   /*
    * The TCPReceiver receives TCPSenderMessages, inserting their payload into the Reassembler
    * at the correct stream index.
    */
-  TCPReceiver():ISN(),ackno(),FIN(false){};
+  TCPReceiver():ISN(),ackno(),SYN(false),FIN(false){};
   void receive( TCPSenderMessage message, Reassembler& reassembler, Writer& inbound_stream );
 
   /* The TCPReceiver sends TCPReceiverMessages back to the TCPSender. */
