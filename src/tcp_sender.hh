@@ -5,8 +5,30 @@
 #include "tcp_sender_message.hh"
 #include <queue>
 #include <optional>
+class Timer{
+  private :
+    uint64_t RTO;
+    bool on ; 
+  public:
+    bool isTimeOut(uint64_t timePass){
+      return timePass >= RTO && on ;
+    }
 
-class Timer ; 
+    void duoble_RTO(){
+      this->RTO = RTO+RTO ; 
+    }
+    void start(uint64_t RTO_){
+      this->RTO = RTO_;
+      this->on = true;
+    }
+    void stop(){
+      this->on=false;
+    }
+    bool isOn(){
+      return on;
+    }
+  };
+
 class TCPSender
 {private:
   Wrap32 isn_;
@@ -44,26 +66,3 @@ public:
   uint64_t consecutive_retransmissions() const; // How many consecutive *re*transmissions have happened?
 };
 
-class Timer{
-  private :
-    uint64_t RTO;
-    bool on ; 
-  public:
-    bool isTimeOut(uint64_t timePass){
-      return timePass >= RTO && on ;
-    }
-
-    void duoble_RTO(){
-      this->RTO = RTO+RTO ; 
-    }
-    void start(uint64_t RTO_){
-      this->RTO = RTO_;
-      this->on = true;
-    }
-    void stop(){
-      this->on=false;
-    }
-    bool isOn(){
-      return on;
-    }
-  }

@@ -9,7 +9,7 @@ using namespace std;
 /* TCPSender constructor (uses a random ISN if none given) */
 TCPSender::TCPSender( uint64_t initial_RTO_ms, optional<Wrap32> fixed_isn )
   : isn_( fixed_isn.value_or( Wrap32 { random_device()() } ) ), initial_RTO_ms_( initial_RTO_ms ),
-  retransmit_Num(0),timePass(0),window_Size(1),nowIndex(0),seqno(isn_),SYN(false),FIN(false),timer(),payload(),outStandingSegs()
+  retransmit_Num(0),timePass(0),window_Size(1),nowIndex(0),seqno(isn_),SYN(true),FIN(false),timer(),payload(),outStandingSegs()
 {}
 
 uint64_t TCPSender::sequence_numbers_in_flight() const
@@ -37,9 +37,14 @@ void TCPSender::push( Reader& outbound_stream )
   for(uint64_t i=0;i<Max_Bytes;){
     uint64_t Segbytes= min(Max_Bytes - i,TCPConfig::MAX_PAYLOAD_SIZE); ; //这是组成这个分组需要的bytes数
     string data ;
-    data.push_back(Segbytes);
+    for (uint64_t j =0;j<Segbytes;++j){
+      data.push_back(*(outbound_stream.peek().data()));
+      outbound_stream.pop(1);
+    }
+    
     payload = Buffer (data);
     i+=Segbytes;
+    if (outbound_stream.is_finished()) FIN = true ; 
     outStandingSegs.push (maybe_send().value()); //将这个加入等待列表
     if (!timer.isOn()) timer.start(initial_RTO_ms_);
   }
@@ -58,11 +63,14 @@ void TCPSender::push( Reader& outbound_stream )
   }
   // 如果oustanding里面没有东西了，就停止timer
   if (outStandingSegs.size() == 0) timer.stop();
+  //重置两个标志为
+  SYN = false;
+  FIN = false;
 }
 
 TCPSenderMessage TCPSender::send_empty_message() const
 {
-  return TCPSenderMessage{seqno,false,Buffer(),false};  // 怎么构建空字符串呢？
+  return TCPSenderMessage{seqno,SYN,Buffer(),FIN};  // 怎么构建空字符串呢？
 }
 
 void TCPSender::receive( const TCPReceiverMessage& msg )
@@ -74,7 +82,7 @@ void TCPSender::receive( const TCPReceiverMessage& msg )
   window_Size = msg.window_size;
   // 再清除oustanding中的已经被确认的分组
   if (delta > 0){
-    for (int i=0;i<delta;++i){
+    for (uint64_t i=0;i<delta;++i){
       outStandingSegs.pop();
     }
   }
