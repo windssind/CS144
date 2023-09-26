@@ -13,6 +13,8 @@ void TCPReceiver::receive( TCPSenderMessage message, Reassembler& reassembler, W
   } // 两个都是封装好的Wrap32类型
   if (message.FIN == true) FIN = true;
   // 只有有初始值的时候才进行正常操作，不然就忽略
+
+  
   if (ISN.has_value()){
     uint64_t preNeedIndex = reassembler.get_needIndex();
     AbSlSeqno = message.seqno.unwrap(ISN.value(),reassembler.get_needIndex());

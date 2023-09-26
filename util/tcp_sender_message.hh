@@ -29,5 +29,5 @@ struct TCPSenderMessage
   bool FIN { false }; //学会这种组织结构体的形式
 
   // How many sequence numbers does this segment use?
-  size_t sequence_length() const { return SYN + payload.size() + FIN; }
+  size_t sequence_length() const { return SYN + payload.size() + FIN; } // 这个只是逻辑上帮忙确定数据位置的，并不是真实的报文段长度
 };
