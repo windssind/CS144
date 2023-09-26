@@ -6,17 +6,21 @@
 #include <queue>
 #include <optional>
 
+class Timer ; 
 class TCPSender
-{
+{private:
   Wrap32 isn_;
   uint64_t initial_RTO_ms_;
   uint64_t retransmit_Num ; 
-  uint64_t window_Size ;
-  uint64_t seqno ; 
+  uint64_t timePass ;
+  uint16_t window_Size ;  
+  uint64_t nowIndex ;
+  Wrap32 seqno ; 
   bool SYN ;
-  bool FIN ; 
-  std :: optional < Buffer > payload ;
-  queue < TCPSenderMessage > outStandingSegs;
+  bool FIN ;
+  Timer timer; 
+  Buffer payload ;
+  std::queue < TCPSenderMessage > outStandingSegs;
 public:
   /* Construct TCP sender with given default Retransmission Timeout and possible ISN */
   TCPSender( uint64_t initial_RTO_ms, std::optional<Wrap32> fixed_isn );
@@ -39,3 +43,27 @@ public:
   uint64_t sequence_numbers_in_flight() const;  // How many sequence numbers are outstanding?
   uint64_t consecutive_retransmissions() const; // How many consecutive *re*transmissions have happened?
 };
+
+class Timer{
+  private :
+    uint64_t RTO;
+    bool on ; 
+  public:
+    bool isTimeOut(uint64_t timePass){
+      return timePass >= RTO && on ;
+    }
+
+    void duoble_RTO(){
+      this->RTO = RTO+RTO ; 
+    }
+    void start(uint64_t RTO_){
+      this->RTO = RTO_;
+      this->on = true;
+    }
+    void stop(){
+      this->on=false;
+    }
+    bool isOn(){
+      return on;
+    }
+  }
