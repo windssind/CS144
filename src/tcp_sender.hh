@@ -3,30 +3,19 @@
 #include "byte_stream.hh"
 #include "tcp_receiver_message.hh"
 #include "tcp_sender_message.hh"
-#include <queue>
+#include <deque>
 #include <optional>
 class Timer{
   private :
     uint64_t RTO;
     bool on ; 
   public:
-    bool isTimeOut(uint64_t timePass){
-      return timePass >= RTO && on ;
-    }
-
-    void duoble_RTO(){
-      this->RTO = RTO+RTO ; 
-    }
-    void start(uint64_t RTO_){
-      this->RTO = RTO_;
-      this->on = true;
-    }
-    void stop(){
-      this->on=false;
-    }
-    bool isOn(){
-      return on;
-    }
+    bool isTimeOut(uint64_t timePass);
+    void duoble_RTO();
+    void start(uint64_t RTO_);
+    void stop();
+    bool isOn();
+    void set(size_t initial_RTO_ms);
   };
 
 class TCPSender
@@ -41,8 +30,8 @@ class TCPSender
   bool SYN ;
   bool FIN ;
   Timer timer; 
-  Buffer payload ;
-  std::queue < TCPSenderMessage > outStandingSegs;
+  std::deque < TCPSenderMessage > outStandingSegs;
+  std::deque < TCPSenderMessage > Msgs;
 public:
   /* Construct TCP sender with given default Retransmission Timeout and possible ISN */
   TCPSender( uint64_t initial_RTO_ms, std::optional<Wrap32> fixed_isn );

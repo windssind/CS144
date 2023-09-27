@@ -6,10 +6,33 @@
 #define min(x,y)  (x)<(y)?(x):(y)
 using namespace std;
 
+
+
+bool    Timer:: isTimeOut(uint64_t timePass){
+      return timePass >= RTO && on ;
+    }
+
+void    Timer:: duoble_RTO(){
+      this->RTO = RTO+RTO ; 
+    }
+void     Timer::start(uint64_t RTO_){
+      this->RTO = RTO_;
+      this->on = true;
+    }
+void    Timer:: stop(){
+      this->on=false;
+    }
+bool    Timer:: isOn(){
+      return on;
+    }
+void     Timer::set(size_t initial_RTO_ms){
+      RTO = initial_RTO_ms ;
+    }
+
 /* TCPSender constructor (uses a random ISN if none given) */
 TCPSender::TCPSender( uint64_t initial_RTO_ms, optional<Wrap32> fixed_isn )
   : isn_( fixed_isn.value_or( Wrap32 { random_device()() } ) ), initial_RTO_ms_( initial_RTO_ms ),
-  retransmit_Num(0),timePass(0),window_Size(1),nowIndex(0),seqno(isn_),SYN(true),FIN(false),timer(),payload(),outStandingSegs()
+  retransmit_Num(0),timePass(0),window_Size(1),nowIndex(0),seqno(isn_),SYN(true),FIN(false),timer(),outStandingSegs(),Msgs()
 {}
 
 uint64_t TCPSender::sequence_numbers_in_flight() const
@@ -25,7 +48,9 @@ uint64_t TCPSender::consecutive_retransmissions() const
 optional<TCPSenderMessage> TCPSender::maybe_send()
 {
   //if (!payload.has_value()) return nullopt ;
-  return TCPSenderMessage{seqno,SYN,payload,FIN}; // 直接用聚合初始化的方法来返回
+  TCPSenderMessage retMsg = Msgs.front();
+  Msgs.pop_front();
+  return retMsg; // 直接用聚合初始化的方法来返回
 }
 
 void TCPSender::push( Reader& outbound_stream )
@@ -39,18 +64,17 @@ void TCPSender::push( Reader& outbound_stream )
     string data ;
     for (uint64_t j =0;j<Segbytes;++j){
       data.push_back(*(outbound_stream.peek().data()));
-      outbound_stream.pop(1);
-    }
-    
-    payload = Buffer (data);
+    } // 构造data
+    if (outbound_stream.is_finished()) FIN = true ;
+    Msgs.push_back(TCPSenderMessage{seqno,SYN,Buffer(data),FIN});
     i+=Segbytes;
-    if (outbound_stream.is_finished()) FIN = true ; 
-    outStandingSegs.push (maybe_send().value()); //将这个加入等待列表
+    outStandingSegs.push_back(TCPSenderMessage{seqno,SYN,Buffer(data),FIN}); //将这个加入等待列表
     if (!timer.isOn()) timer.start(initial_RTO_ms_);
+    SYN = false ;
   }
-  
+  // 修改完毕
   // 考虑定时器
-  if (timer.isTimeOut(timePass)){
+  /*if (timer.isTimeOut(timePass)){
     seqno = outStandingSegs.front().seqno; 
     SYN = outStandingSegs.front().SYN;
     payload = outStandingSegs.front().payload;
@@ -65,7 +89,7 @@ void TCPSender::push( Reader& outbound_stream )
   if (outStandingSegs.size() == 0) timer.stop();
   //重置两个标志为
   SYN = false;
-  FIN = false;
+  FIN = false;*/
 }
 
 TCPSenderMessage TCPSender::send_empty_message() const
@@ -83,14 +107,24 @@ void TCPSender::receive( const TCPReceiverMessage& msg )
   // 再清除oustanding中的已经被确认的分组
   if (delta > 0){
     for (uint64_t i=0;i<delta;++i){
-      outStandingSegs.pop();
+      outStandingSegs.pop_front();
     }
+    timer.set(initial_RTO_ms_);
+    if (outStandingSegs.size() == 0) timer.stop();
   }
 }
 
 void TCPSender::tick( const size_t ms_since_last_tick )
 {
-  timePass+=ms_since_last_tick;
+  if (timer.isOn()){
+    timePass+=ms_since_last_tick;
+  }
+  if (timer.isTimeOut(timePass)){
+    timePass = 0;
+    Msgs.push_front(outStandingSegs.front());
+    timer.duoble_RTO();
+  }
+  // 需要在这里进行重传信息
 }
 
-//TODO:fixed all the bugs
+//TODO:为什么第一条信息的size为1,data初始化的时候length就是0,在stream peek之后才修改为了length=1,为什么呢？这是由C++的一些特性决定的，回去看看peek函数
