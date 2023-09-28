@@ -26,9 +26,12 @@ class TCPSender
   uint64_t timePass ;
   uint16_t window_Size ;  
   uint64_t nowIndex ;
-  Wrap32 seqno ; 
+  uint64_t seqnoInFlight;
+  Wrap32 send_base ; 
+  Wrap32 nextSeqno ;
   bool SYN ;
   bool FIN ;
+  bool hasConnected;
   Timer timer; 
   std::deque < TCPSenderMessage > outStandingSegs;
   std::deque < TCPSenderMessage > Msgs;

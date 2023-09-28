@@ -56,6 +56,7 @@ uint64_t Writer::bytes_pushed() const
 
 string_view Reader::peek() const
 {
+  if (bytes_buffered()  == 0) return string_view(); 
   return string_view(&this->buffer.front(),1);
 }
 
