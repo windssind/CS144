@@ -78,13 +78,16 @@ void TCPSender::push( Reader& outbound_stream )
       outbound_stream.pop(1);
     } // 构造data
     if (outbound_stream.is_finished()) FIN = true ;
-    Msgs.push_back(TCPSenderMessage{nextSeqno,SYN,Buffer(data),FIN});
-    i+=Segbytes;
-    nextSeqno= nextSeqno + Segbytes;
     TCPSenderMessage msgWaitForAcked = TCPSenderMessage{nextSeqno,SYN,Buffer(data),FIN};
+    uint64_t msgLen = msgWaitForAcked.sequence_length();
+    Msgs.push_back(msgWaitForAcked);
+    nextSeqno= nextSeqno + msgLen; // seqno 递增
+    window_Size -= msgLen;
+    // 这个是outstanding
     outStandingSegs.push_back(msgWaitForAcked); //将这个加入等待列表
-    seqnoInFlight += msgWaitForAcked.sequence_length();
+    seqnoInFlight += msgLen ; 
     if (!timer.isOn()) timer.start(initial_RTO_ms_);
+    i+=Segbytes;
   }
   // 修改完毕
   // 考虑定时器
