@@ -147,7 +147,7 @@ void TCPSender::receive( const TCPReceiverMessage& msg )
   left_Window_Size = window_Size==0? 1 : recv_Index + window_Size - next_Index;
   // 再清除oustanding中的已经被确认的分组
   if (delta > 0){
-    for (uint64_t i=0;i<delta;){
+    /*for (uint64_t i=0;i<delta;){
       uint64_t ackBytes = outStandingSegs.front().sequence_length();
       seqnoInFlight -= ackBytes ; 
       outStandingSegs.pop_front();
@@ -156,7 +156,20 @@ void TCPSender::receive( const TCPReceiverMessage& msg )
     timer.set(initial_RTO_ms_);
     retransmit_Num=0;
     timePass = 0; //当收到新的确认消息后，重置timePass和retransmit-num
-    if (outStandingSegs.size() == 0) timer.stop();
+    if (outStandingSegs.size() == 0) timer.stop();*/
+    while (true){
+      if (outStandingSegs.empty()) break;
+      TCPSenderMessage front =  outStandingSegs.front();
+      uint64_t front_Size = front.sequence_length();
+      if (recv_Index >= front.seqno.unwrap(isn_,nowIndex) + front_Size){
+          seqnoInFlight -= front_Size;
+          outStandingSegs.pop_front();
+          timer.set(initial_RTO_ms_);
+          retransmit_Num=0;
+          timePass = 0;
+          if (outStandingSegs.empty())timer.stop();
+      }else break;
+    }
   }
 }
 
