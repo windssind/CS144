@@ -57,40 +57,6 @@ optional<TCPSenderMessage> TCPSender::maybe_send()
 
 void TCPSender::push( Reader& outbound_stream )
 {
-  /*if (outbound_stream.is_finished()) hasClosed = true ; 
-  uint64_t bufferNum = outbound_stream.bytes_buffered();
-  uint64_t Max_Bytes ; //最大传输值为windowsize和现有的bufferNum的较小值
-  // NOte:: hasClosed might be instable
-  Max_Bytes= min(bufferNum + !hasConnected + (hasClosed &&!hasSendFIN),left_Window_Size); //如果窗口满了，就默认值为1*/ // 这是这次push中可以发送的最大bit值 // 主要还是Max——Bytes指代不明，Max——Bytes这时如果你要认定他为本次传输的最多要传输自己字节，那么由于FIN和SYN未确定，那么Max——Byres不能单纯用BUfferNnum来衡量
-  // TODO：如果是后面push完才finsih，这里的Max——Bytes就会少1
-  // 数据分组成为SenderMSGs*/
-  /*uint64_t i=0;
-  for(;i < Max_Bytes;){ // 如果是有东西要送或者finish或者还没有连接，都需要进入这里发送信息
-    //不好的实现，引发很多bug阿if (bufferNum == 0 && !SYN) return; // 排除特殊情况，如果已经connected并且buffer为0,就不需要再push。直接return就好了
-    uint64_t Segbytes= min(Max_Bytes - i,TCPConfig::MAX_PAYLOAD_SIZE); //这是组成这个分组需要的bytes数,bytes数还需要小于窗口
-    bool SYN = hasConnected ? false : true ; 
-    i+=SYN;
-    string data ;
-    for (uint64_t j=i;j<Segbytes && outbound_stream.bytes_buffered() > 0 ;++j){
-      data.append(outbound_stream.peek()); // 这里可以直接这样写
-      outbound_stream.pop(1);
-      i++;
-    }
-    if (outbound_stream.is_finished()) hasClosed = true ; 
-    bool FIN = hasClosed && i +1 == Max_Bytes ? true : false ;
-    i+=FIN ; 
-    TCPSenderMessage msgWaitForAcked = TCPSenderMessage{nextSeqno,SYN,Buffer(data),FIN};
-    if (!hasConnected && SYN) hasConnected = true ; 
-    if (FIN) hasSendFIN = true ;
-    uint64_t msgLen = msgWaitForAcked.sequence_length();
-    seqnoInFlight += msgLen ;
-    left_Window_Size -= msgLen ; //猜想：一次能写入的message最大是窗口。。。。
-    Msgs.push_back(msgWaitForAcked);
-    outStandingSegs.push_back(msgWaitForAcked);
-    nextSeqno= nextSeqno + msgLen; // seqno 递增
-    // 这个是outstanding
-    if (!timer.isOn()) timer.start(initial_RTO_ms_);
-  }*/
   if (outbound_stream.is_finished()) hasClosed =true;
   while ((left_Window_Size >0 && outbound_stream.bytes_buffered()>0) || !hasConnected || (hasClosed&&!hasSendFIN &&left_Window_Size>0)){
     bool SYN = hasConnected ? false : true ; 
@@ -147,16 +113,6 @@ void TCPSender::receive( const TCPReceiverMessage& msg )
   left_Window_Size = window_Size==0? 1 : recv_Index + window_Size - next_Index;
   // 再清除oustanding中的已经被确认的分组
   if (delta > 0){
-    /*for (uint64_t i=0;i<delta;){
-      uint64_t ackBytes = outStandingSegs.front().sequence_length();
-      seqnoInFlight -= ackBytes ; 
-      outStandingSegs.pop_front();
-      i+=ackBytes ;
-    }
-    timer.set(initial_RTO_ms_);
-    retransmit_Num=0;
-    timePass = 0; //当收到新的确认消息后，重置timePass和retransmit-num
-    if (outStandingSegs.size() == 0) timer.stop();*/
     while (true){
       if (outStandingSegs.empty()) break;
       TCPSenderMessage front =  outStandingSegs.front();
