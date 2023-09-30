@@ -30,9 +30,9 @@ class TCPSender
   uint64_t seqnoInFlight;
   Wrap32 send_base ; 
   Wrap32 nextSeqno ;
-  bool SYN ;
-  bool FIN ;
   bool hasConnected;
+  bool hasClosed ;
+  bool hasSendFIN ;
   Timer timer; 
   std::deque < TCPSenderMessage > outStandingSegs;
   std::deque < TCPSenderMessage > Msgs;
