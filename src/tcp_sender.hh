@@ -24,7 +24,8 @@ class TCPSender
   uint64_t initial_RTO_ms_;
   uint64_t retransmit_Num ; 
   uint64_t timePass ;
-  uint16_t window_Size ;  
+  uint16_t window_Size ; 
+  uint16_t left_Window_Size ;  
   uint64_t nowIndex ;
   uint64_t seqnoInFlight;
   Wrap32 send_base ; 

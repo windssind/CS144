@@ -32,7 +32,7 @@ void     Timer::set(size_t initial_RTO_ms){
 /* TCPSender constructor (uses a random ISN if none given) */
 TCPSender::TCPSender( uint64_t initial_RTO_ms, optional<Wrap32> fixed_isn )
   : isn_( fixed_isn.value_or( Wrap32 { random_device()() } ) ), initial_RTO_ms_( initial_RTO_ms ),
-  retransmit_Num(0),timePass(0),window_Size(1),nowIndex(0),seqnoInFlight(0),send_base(isn_),nextSeqno(isn_), SYN(true),FIN(false),hasConnected(false),timer(),outStandingSegs(),Msgs()
+  retransmit_Num(0),timePass(0),window_Size(1),left_Window_Size(1),nowIndex(0),seqnoInFlight(0),send_base(isn_),nextSeqno(isn_), SYN(true),FIN(false),hasConnected(false),timer(),outStandingSegs(),Msgs()
 {}
 
 uint64_t TCPSender::sequence_numbers_in_flight() const
@@ -47,66 +47,48 @@ uint64_t TCPSender::consecutive_retransmissions() const
 
 optional<TCPSenderMessage> TCPSender::maybe_send()
 {
-  //if (!payload.has_value()) return nullopt ;
-  if (!Msgs.empty()){
-    TCPSenderMessage retMsg = Msgs.front();
-    Msgs.pop_front();
-    return retMsg; // 直接用聚合初始化的方法来返回
-  }else {
-    return nullopt;
-  }
-  
+  if (Msgs.empty()) return nullopt;
+  //if (msgLen > window_Size) return nullopt ;
+  // 可以正常发送
+  TCPSenderMessage retMsg = Msgs.front();
+  Msgs.pop_front();
+  return retMsg; // 直接用聚合初始化的方法来返回
 }
 
 void TCPSender::push( Reader& outbound_stream )
 {
   if (!hasConnected) {
     SYN=true;
-    hasConnected = true;
   }else {
     SYN=false;
   }
   uint64_t bufferNum = outbound_stream.bytes_buffered();
   uint64_t Max_Bytes ; //最大传输值为windowsize和现有的bufferNum的较小值
-  if (window_Size == 1) Max_Bytes= 1;
-  else Max_Bytes= min(bufferNum,window_Size); //如果窗口满了，就默认值为1
-  for(uint64_t i=0;i<Max_Bytes;){
-    uint64_t Segbytes= min(Max_Bytes - i,TCPConfig::MAX_PAYLOAD_SIZE); ; //这是组成这个分组需要的bytes数
+  Max_Bytes= min(bufferNum ,left_Window_Size); //如果窗口满了，就默认值为1*/ // 这是这次push中可以发送的最大bit值 // 主要还是Max——Bytes指代不明，Max——Bytes这时如果你要认定他为本次传输的最多要传输自己字节，那么由于FIN和SYN未确定，那么Max——Byres不能单纯用BUfferNnum来衡量
+  // 数据分组成为SenderMSGs
+  uint64_t i=0;
+  for(;!hasConnected || i < Max_Bytes || (outbound_stream.is_finished()&& !FIN && left_Window_Size >0);){ // 如果是有东西要送或者finish或者还没有连接，都需要进入这里发送信息
+    //不好的实现，引发很多bug阿if (bufferNum == 0 && !SYN) return; // 排除特殊情况，如果已经connected并且buffer为0,就不需要再push。直接return就好了
+    uint64_t Segbytes= min(Max_Bytes - i,TCPConfig::MAX_PAYLOAD_SIZE); //这是组成这个分组需要的bytes数,bytes数还需要小于窗口
     string data ;
-    for (uint64_t j =0;j<Segbytes;++j){
-      data.append(outbound_stream.peek());
+    for (uint64_t j=0;j<Segbytes;++j){
+      data.append(outbound_stream.peek()); // 这里可以直接这样写
       outbound_stream.pop(1);
-    } // 构造data
-    if (outbound_stream.is_finished()) FIN = true ;
+    }
+    if (outbound_stream.is_finished() && i + Segbytes ==Max_Bytes ) FIN = true ;
     TCPSenderMessage msgWaitForAcked = TCPSenderMessage{nextSeqno,SYN,Buffer(data),FIN};
     uint64_t msgLen = msgWaitForAcked.sequence_length();
+    seqnoInFlight += msgLen ;
+    left_Window_Size -= msgLen ; //猜想：一次能写入的message最大是窗口。。。。
     Msgs.push_back(msgWaitForAcked);
+    outStandingSegs.push_back(msgWaitForAcked);
     nextSeqno= nextSeqno + msgLen; // seqno 递增
-    window_Size -= msgLen;
     // 这个是outstanding
-    outStandingSegs.push_back(msgWaitForAcked); //将这个加入等待列表
-    seqnoInFlight += msgLen ; 
     if (!timer.isOn()) timer.start(initial_RTO_ms_);
     i+=Segbytes;
+    if (hasConnected == false) hasConnected = true;
+    if(FIN) return ;
   }
-  // 修改完毕
-  // 考虑定时器
-  /*if (timer.isTimeOut(timePass)){
-    seqno = outStandingSegs.front().seqno; 
-    SYN = outStandingSegs.front().SYN;
-    payload = outStandingSegs.front().payload;
-    FIN = outStandingSegs.front().FIN ;
-    maybe_send();
-    // reset RTO
-    timer.duoble_RTO();
-    timePass=0;
-    retransmit_Num++;
-  }
-  // 如果oustanding里面没有东西了，就停止timer
-  if (outStandingSegs.size() == 0) timer.stop();
-  //重置两个标志为
-  SYN = false;
-  FIN = false;*/
 }
 
 TCPSenderMessage TCPSender::send_empty_message() const
@@ -116,11 +98,19 @@ TCPSenderMessage TCPSender::send_empty_message() const
 
 void TCPSender::receive( const TCPReceiverMessage& msg )
 {
-  uint64_t delta = msg.ackno.value().unwrap(isn_,nowIndex)
-                  - send_base.unwrap(isn_,nowIndex); // 看看确认号和seqno有变化没
+  if (!msg.ackno.has_value()) {
+    window_Size = msg.window_size;
+    return;
+  }
+  uint64_t recv_Index = msg.ackno.value().unwrap(isn_,nowIndex);
+  uint64_t send_Index = send_base.unwrap(isn_,nowIndex); // 看看确认号和seqno有变化没
+  if (recv_Index <send_Index) return ;// 没用的信息                
+  if (recv_Index > nextSeqno.unwrap(isn_,nowIndex)) return ; //这个更离谱，直接超过了原来的
+  uint64_t delta = recv_Index - send_Index;
   send_base = msg.ackno.value();
+  window_Size = msg.window_size ;
   nowIndex+=delta; // 及时更新nowIndex，便于后面unwrap
-  window_Size = msg.window_size;
+  left_Window_Size = window_Size==0? 1 :window_Size;
   // 再清除oustanding中的已经被确认的分组
   if (delta > 0){
     for (uint64_t i=0;i<delta;){
@@ -130,6 +120,8 @@ void TCPSender::receive( const TCPReceiverMessage& msg )
       i+=ackBytes ;
     }
     timer.set(initial_RTO_ms_);
+    retransmit_Num=0;
+    timePass = 0; //当收到新的确认消息后，重置timePass和retransmit-num
     if (outStandingSegs.size() == 0) timer.stop();
   }
 }
@@ -141,10 +133,12 @@ void TCPSender::tick( const size_t ms_since_last_tick )
   }
   if (timer.isTimeOut(timePass)){
     timePass = 0;
+    retransmit_Num++;
     Msgs.push_front(outStandingSegs.front());
     timer.duoble_RTO();
   }
   // 需要在这里进行重传信息
 }
 
-//TODO:为什么第一条信息的size为1,data初始化的时候length就是0,在stream peek之后才修改为了length=1,为什么呢？这是由C++的一些特性决定的，回去看看peek函数
+//TODO:TODO:本来因为窗口满了push掉的没有完全组装成message，在ack有了新的窗口容量后，就可以传过去了
+// TODO:sender和receiver的时候都是SYN和FIN非拆毁嗯容易出错，要不要另外弄一个函数？

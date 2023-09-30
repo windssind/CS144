@@ -123,7 +123,7 @@ int main()
       test.execute( ExpectSeqno { isn + 1 } );
       test.execute( ExpectSeqnosInFlight { 0 } );
       test.execute( Push( "01234567" ) );
-      test.execute( ExpectSeqnosInFlight { 3 } );
+      test.execute( ExpectSeqnosInFlight { 3 } ); //这个样例我又看不懂了。。。。。这里就是会假想对面的窗口已经满了吗？
       test.execute( ExpectMessage {}.with_data( "012" ) );
       test.execute( ExpectNoSegment {} );
       test.execute( ExpectSeqno { Wrap32 { isn + 1 + 3 } } );
