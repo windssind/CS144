@@ -8,8 +8,19 @@
 #include <list>
 #include <optional>
 #include <queue>
+#include <map>
+#include <tuple>
 #include <unordered_map>
 #include <utility>
+
+#define IP uint32_t
+
+struct  EthernetAddressWithTime
+{
+  EthernetAddress address;
+  size_t timePass;
+};
+
 
 // A "network interface" that connects IP (the internet layer, or network layer)
 // with Ethernet (the network access layer, or link layer).
@@ -40,6 +51,18 @@ private:
 
   // IP (known as Internet-layer or network-layer) address of the interface
   Address ip_address_;
+
+  // ARP mapping table 
+  std:: map < IP , EthernetAddressWithTime > ARP ;
+
+  // queue for the datagram that not have a entry in ARP
+  std::map < IP, InternetDatagram> waitingList ;
+
+  //queue for sending frames
+  std::queue <EthernetFrame > SendingFrames ; 
+
+  //map for ARP message that has sent
+  std::map < IP ,uint32_t > ARPTimerPass ; 
 
 public:
   // Construct a network interface with given Ethernet (network-access-layer) and IP (internet-layer)

@@ -10,7 +10,7 @@ struct ARPMessage
   static constexpr size_t LENGTH = 28;         // ARP message length in bytes
   static constexpr uint16_t TYPE_ETHERNET = 1; // ARP type for Ethernet/Wi-Fi as link-layer protocol
   static constexpr uint16_t OPCODE_REQUEST = 1;
-  static constexpr uint16_t OPCODE_REPLY = 2;
+  static constexpr uint16_t OPCODE_REPLY = 2; // 回答的OPCODE是2
 
   uint16_t hardware_type = TYPE_ETHERNET;             // Type of the link-layer protocol (generally Ethernet/Wi-Fi)
   uint16_t protocol_type = EthernetHeader::TYPE_IPv4; // Type of the Internet-layer protocol (generally IPv4)
