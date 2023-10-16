@@ -63,6 +63,7 @@ private:
 
   //map for ARP message that has sent
   std::map < IP ,uint32_t > ARPTimerPass ; 
+  void SendARP(EthernetAddress receiver_ethernet,uint16_t OPCODE ,IP target_ip);
 
 public:
   // Construct a network interface with given Ethernet (network-access-layer) and IP (internet-layer)

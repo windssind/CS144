@@ -63,9 +63,9 @@ EthernetFrame make_frame( const EthernetAddress& src,
 int main()
 {
   try {
-    {
+    {// Test1
       const EthernetAddress local_eth = random_private_ethernet_address();
-      NetworkInterfaceTestHarness test { "typical ARP workflow", local_eth, Address( "4.3.2.1", 0 ) };
+      NetworkInterfaceTestHarness test { "typical ARP workflow", local_eth, Address( "4.3.2.1", 0 ) }; //说明是4.3.2.1的主机9
 
       const auto datagram = make_datagram( "5.6.7.8", "13.12.11.10" );
       test.execute( SendDatagram { datagram, Address( "192.168.0.1", 0 ) } );
@@ -107,7 +107,7 @@ int main()
       test.execute( ReceiveFrame(
         make_frame( target_eth, another_eth, EthernetHeader::TYPE_IPv4, serialize( reply_datagram ) ), {} ) );
     }
-
+    //Teat2
     {
       const EthernetAddress local_eth = random_private_ethernet_address();
       const EthernetAddress remote_eth = random_private_ethernet_address();
@@ -132,7 +132,7 @@ int main()
         serialize( make_arp( ARPMessage::OPCODE_REPLY, local_eth, "5.5.5.5", remote_eth, "10.0.1.1" ) ) ) } );
       test.execute( ExpectNoFrame {} );
     }
-
+    //Test3
     {
       const EthernetAddress local_eth = random_private_ethernet_address();
       const EthernetAddress remote_eth = random_private_ethernet_address();
@@ -156,7 +156,7 @@ int main()
         ExpectFrame { make_frame( local_eth, remote_eth, EthernetHeader::TYPE_IPv4, serialize( datagram ) ) } );
       test.execute( ExpectNoFrame {} );
     }
-
+  //Test4
     {
       const EthernetAddress local_eth = random_private_ethernet_address();
       NetworkInterfaceTestHarness test { "pending mappings last five seconds", local_eth, Address( "1.2.3.4", 0 ) };
@@ -181,7 +181,7 @@ int main()
                     serialize( make_arp( ARPMessage::OPCODE_REQUEST, local_eth, "1.2.3.4", {}, "10.0.0.1" ) ) ) } );
       test.execute( ExpectNoFrame {} );
     }
-
+  //  test5
     {
       const EthernetAddress local_eth = random_private_ethernet_address();
       NetworkInterfaceTestHarness test { "active mappings last 30 seconds", local_eth, Address( "4.3.2.1", 0 ) };
@@ -247,7 +247,7 @@ int main()
         make_frame( local_eth, new_target_eth, EthernetHeader::TYPE_IPv4, serialize( datagram4 ) ) } );
       test.execute( ExpectNoFrame {} );
     }
-
+  //Test6
     {
       const EthernetAddress local_eth = random_private_ethernet_address();
       const EthernetAddress remote_eth1 = random_private_ethernet_address();
