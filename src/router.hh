@@ -1,9 +1,22 @@
 #pragma once
 
 #include "network_interface.hh"
-
 #include <optional>
 #include <queue>
+#include <vector>
+
+struct Entry // 记录IP地址和对应的转发接口
+{
+  size_t interface_num;
+  std::optional < Address > next_hop;
+  uint8_t prefix_length ;
+  int32_t prefix;
+  // 重载操作符
+  bool operator<(const Entry& other) const{
+    return prefix_length > other.prefix_length;
+  }
+};
+
 
 // A wrapper for NetworkInterface that makes the host-side
 // interface asynchronous: instead of returning received datagrams
@@ -54,7 +67,8 @@ class Router
 {
   // The router's collection of network interfaces
   std::vector<AsyncNetworkInterface> interfaces_ {};
-
+  std::vector < Entry > routing_table;
+  int Match(uint32_t ip_address , Entry entry);
 public:
   // Add an interface to the router
   // interface: an already-constructed network interface
@@ -64,6 +78,7 @@ public:
     interfaces_.push_back( std::move( interface ) );
     return interfaces_.size() - 1;
   }
+  Router();
 
   // Access an interface by index
   AsyncNetworkInterface& interface( size_t N ) { return interfaces_.at( N ); }
